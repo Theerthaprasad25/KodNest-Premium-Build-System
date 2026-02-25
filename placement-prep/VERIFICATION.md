@@ -194,3 +194,26 @@ Every saved entry has:
 **Simulate:** In DevTools → Application → Local Storage, edit `placement-prep-analysis-history` to add a malformed entry (e.g. `{"id":"x"}` without `jdText`).
 
 **Verify:** History loads valid entries. Corrupted ones skipped. Message: "One saved entry couldn't be loaded. Create a new analysis."
+
+---
+
+## 16. Test Checklist (/prp/07-test)
+
+1. Navigate to `/prp/07-test` (or Dashboard → Test Checklist card)
+2. **Verify:** "Tests Passed: 0 / 10" at top
+3. **Verify:** "Fix issues before shipping." warning when < 10
+4. **Verify:** 10 checklist items with checkboxes and "How to test" hints
+5. Check an item → **Verify:** Checkbox toggles
+6. Refresh page → **Verify:** Checked state persists (stored in localStorage)
+7. Click "Reset checklist" → **Verify:** All unchecked
+
+---
+
+## 17. Ship Lock (/prp/08-ship)
+
+1. With < 10 tests passed, navigate to `/prp/08-ship`
+2. **Verify:** "Ship locked" message with lock icon
+3. **Verify:** "Go to Test Checklist" button
+4. Go to Test Checklist, check all 10 items
+5. Navigate to `/prp/08-ship`
+6. **Verify:** "Ready to ship" message (unlocked)

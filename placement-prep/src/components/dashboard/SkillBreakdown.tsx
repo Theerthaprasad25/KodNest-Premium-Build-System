@@ -24,8 +24,8 @@ export default function SkillBreakdown() {
         <CardTitle>Skill Breakdown</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="h-64">
-          <ResponsiveContainer width="100%" height="100%">
+        <div className="h-64 min-h-[256px] w-full">
+          <ResponsiveContainer width="100%" height={256} debounce={50}>
             <RadarChart data={data}>
               <PolarGrid stroke="#e5e7eb" />
               <PolarAngleAxis

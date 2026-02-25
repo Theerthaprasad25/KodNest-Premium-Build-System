@@ -18,31 +18,34 @@ const CATEGORY_LABELS: Record<string, string> = {
 }
 
 function getAllSkills(extractedSkills: AnalysisEntry['extractedSkills']): string[] {
+  const safe = (arr: unknown): string[] => (Array.isArray(arr) ? arr.filter((x): x is string => typeof x === 'string') : [])
   return [
-    ...extractedSkills.coreCS,
-    ...extractedSkills.languages,
-    ...extractedSkills.web,
-    ...extractedSkills.data,
-    ...extractedSkills.cloud,
-    ...extractedSkills.testing,
-    ...extractedSkills.other,
+    ...safe(extractedSkills?.coreCS),
+    ...safe(extractedSkills?.languages),
+    ...safe(extractedSkills?.web),
+    ...safe(extractedSkills?.data),
+    ...safe(extractedSkills?.cloud),
+    ...safe(extractedSkills?.testing),
+    ...safe(extractedSkills?.other),
   ]
 }
 
-function formatPlanForExport(plan: AnalysisEntry['plan7Days']): string {
-  return plan
+function formatPlanForExport(plan: AnalysisEntry['plan7Days'] | undefined): string {
+  const p = Array.isArray(plan) ? plan : []
+  return p
     .map(
       (d) =>
-        `${d.day}: ${d.focus}\n${d.tasks.map((t) => `  • ${t}`).join('\n')}`
+        `${d?.day ?? ''}: ${d?.focus ?? ''}\n${(Array.isArray(d?.tasks) ? d.tasks : []).map((t) => `  • ${t}`).join('\n')}`
     )
     .join('\n\n')
 }
 
-function formatChecklistForExport(checklist: AnalysisEntry['checklist']): string {
-  return checklist
+function formatChecklistForExport(checklist: AnalysisEntry['checklist'] | undefined): string {
+  const c = Array.isArray(checklist) ? checklist : []
+  return c
     .map(
       (r) =>
-        `${r.roundTitle}\n${r.items.map((i) => `  • ${i}`).join('\n')}`
+        `${r?.roundTitle ?? ''}\n${(Array.isArray(r?.items) ? r.items : []).map((i) => `  • ${i}`).join('\n')}`
     )
     .join('\n\n')
 }
@@ -58,34 +61,40 @@ export default function Results() {
   const [result, setResult] = useState<AnalysisEntry | null>(null)
   const [copied, setCopied] = useState<string | null>(null)
 
+  const idFromState = (location.state as { analysisId?: string } | null)?.analysisId
+  const idFromUrl = searchParams.get('id')
+  const analysisId = idFromState ?? idFromUrl ?? null
+
   useEffect(() => {
-    const idFromState = (location.state as { analysisId?: string } | null)?.analysisId
-    const idFromUrl = searchParams.get('id')
-    const id = idFromState ?? idFromUrl
+    const id = analysisId
 
     function ensureEntry(entry: AnalysisEntry): AnalysisEntry {
-      let updated = entry
-      const allSkills = getAllSkills(entry.extractedSkills)
-      for (const s of allSkills) {
-        if (!(s in updated.skillConfidenceMap)) {
-          updated = { ...updated, skillConfidenceMap: { ...updated.skillConfidenceMap, [s]: 'practice' } }
+      try {
+        let updated = entry
+        const allSkills = getAllSkills(entry.extractedSkills ?? {} as AnalysisEntry['extractedSkills'])
+        for (const s of allSkills) {
+          if (!(s in (updated.skillConfidenceMap ?? {}))) {
+            updated = { ...updated, skillConfidenceMap: { ...(updated.skillConfidenceMap ?? {}), [s]: 'practice' as const } }
+          }
         }
+        updated = {
+          ...updated,
+          finalScore: computeFinalScore(updated.baseScore, updated.skillConfidenceMap ?? {}, allSkills),
+        }
+        if (!updated.companyIntel && (updated.company ?? '').trim()) {
+          const intel = generateCompanyIntel(updated.company, updated.jdText)
+          if (intel) updated = { ...updated, companyIntel: intel }
+        }
+        if (!Array.isArray(updated.roundMapping) || updated.roundMapping.length === 0) {
+          updated = { ...updated, roundMapping: generateRoundMapping(updated.company ?? '', updated.extractedSkills ?? {} as AnalysisEntry['extractedSkills']) }
+        }
+        if (JSON.stringify(updated) !== JSON.stringify(entry)) {
+          updateAnalysis(updated)
+        }
+        return updated
+      } catch {
+        return entry
       }
-      updated = {
-        ...updated,
-        finalScore: computeFinalScore(updated.baseScore, updated.skillConfidenceMap, allSkills),
-      }
-      if (!updated.companyIntel && updated.company.trim()) {
-        const intel = generateCompanyIntel(updated.company, updated.jdText)
-        if (intel) updated = { ...updated, companyIntel: intel }
-      }
-      if (!updated.roundMapping || updated.roundMapping.length === 0) {
-        updated = { ...updated, roundMapping: generateRoundMapping(updated.company, updated.extractedSkills) }
-      }
-      if (JSON.stringify(updated) !== JSON.stringify(entry)) {
-        updateAnalysis(updated)
-      }
-      return updated
     }
 
     if (id) {
@@ -95,7 +104,7 @@ export default function Results() {
       const latest = getLatestAnalysis()
       setResult(latest ? ensureEntry(latest) : null)
     }
-  }, [location.state, searchParams])
+  }, [analysisId])
 
   const toggleSkill = useCallback(
     (skill: string) => {
@@ -155,19 +164,20 @@ export default function Results() {
   }
 
   const { company, role, extractedSkills, checklist, plan7Days, questions, companyIntel, roundMapping } = result
-  const skillConfidenceMap = result.skillConfidenceMap
-  const allSkills = getAllSkills(extractedSkills)
+  const skillConfidenceMap = result.skillConfidenceMap ?? {}
+  const allSkills = getAllSkills(extractedSkills ?? {} as AnalysisEntry['extractedSkills'])
   const finalScore = result.finalScore
   const weakSkills = allSkills.filter((s) => (skillConfidenceMap[s] ?? 'practice') === 'practice').slice(0, 3)
 
+  const skills = extractedSkills ?? {}
   const skillEntries = [
-    ['coreCS', extractedSkills.coreCS],
-    ['languages', extractedSkills.languages],
-    ['web', extractedSkills.web],
-    ['data', extractedSkills.data],
-    ['cloud', extractedSkills.cloud],
-    ['testing', extractedSkills.testing],
-    ['other', extractedSkills.other],
+    ['coreCS', Array.isArray(skills.coreCS) ? skills.coreCS : []],
+    ['languages', Array.isArray(skills.languages) ? skills.languages : []],
+    ['web', Array.isArray(skills.web) ? skills.web : []],
+    ['data', Array.isArray(skills.data) ? skills.data : []],
+    ['cloud', Array.isArray(skills.cloud) ? skills.cloud : []],
+    ['testing', Array.isArray(skills.testing) ? skills.testing : []],
+    ['other', Array.isArray(skills.other) ? skills.other : []],
   ] as const
 
   const fullExportText = [
@@ -187,10 +197,10 @@ export default function Results() {
           '',
         ]
       : []),
-    ...(roundMapping && roundMapping.length > 0
+    ...(Array.isArray(roundMapping) && roundMapping.length > 0
       ? [
           '=== ROUND MAPPING ===',
-          ...roundMapping.map((r) => `${r.roundTitle}\n  ${r.whyItMatters}`),
+          ...roundMapping.map((r) => `${r?.roundTitle ?? ''}\n  ${r?.whyItMatters ?? ''}`),
           '',
         ]
       : []),
@@ -200,13 +210,13 @@ export default function Results() {
     ),
     '',
     '=== ROUND-WISE CHECKLIST ===',
-    formatChecklistForExport(checklist),
+    formatChecklistForExport(checklist ?? []),
     '',
     '=== 7-DAY PLAN ===',
-    formatPlanForExport(plan7Days),
+    formatPlanForExport(plan7Days ?? []),
     '',
     '=== 10 LIKELY INTERVIEW QUESTIONS ===',
-    formatQuestionsForExport(questions),
+    formatQuestionsForExport(Array.isArray(questions) ? questions : []),
   ]
     .filter(Boolean)
     .join('\n')
@@ -279,7 +289,7 @@ export default function Results() {
       )}
 
       {/* Round Mapping */}
-      {roundMapping && roundMapping.length > 0 && (
+      {Array.isArray(roundMapping) && roundMapping.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle>Round Mapping</CardTitle>
@@ -298,7 +308,7 @@ export default function Results() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-gray-900">{r.roundTitle}</p>
-                    {r.focusAreas.length > 0 && (
+                    {Array.isArray(r.focusAreas) && r.focusAreas.length > 0 && (
                       <p className="text-xs text-gray-500 mt-0.5">{r.focusAreas.join(', ')}</p>
                     )}
                     <p className="text-sm text-gray-600 mt-1">{r.whyItMatters}</p>
@@ -373,7 +383,7 @@ export default function Results() {
         </CardHeader>
         <CardContent>
           <div className="space-y-6">
-            {checklist.map((round) => (
+            {(Array.isArray(checklist) ? checklist : []).map((round) => (
               <div key={round.roundTitle}>
                 <h4 className="font-semibold text-gray-900 mb-2">{round.roundTitle}</h4>
                 <ul className="list-disc list-inside space-y-1 text-gray-600">
@@ -401,7 +411,7 @@ export default function Results() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {plan7Days.map((day) => (
+            {(Array.isArray(plan7Days) ? plan7Days : []).map((day) => (
               <div key={day.day} className="border-l-2 border-primary/30 pl-4">
                 <p className="font-semibold text-gray-900">{day.day}: {day.focus}</p>
                 <ul className="list-disc list-inside text-gray-600 mt-1 space-y-0.5">
@@ -429,7 +439,7 @@ export default function Results() {
         </CardHeader>
         <CardContent>
           <ol className="list-decimal list-inside space-y-2 text-gray-600">
-            {questions.map((q, i) => (
+            {(Array.isArray(questions) ? questions : []).map((q, i) => (
               <li key={i}>{q}</li>
             ))}
           </ol>

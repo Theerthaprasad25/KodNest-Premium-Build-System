@@ -1,11 +1,12 @@
 import { Link } from 'react-router-dom'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
 import OverallReadiness from '@/components/dashboard/OverallReadiness'
 import SkillBreakdown from '@/components/dashboard/SkillBreakdown'
 import ContinuePractice from '@/components/dashboard/ContinuePractice'
 import WeeklyGoals from '@/components/dashboard/WeeklyGoals'
 import UpcomingAssessments from '@/components/dashboard/UpcomingAssessments'
 import { Card, CardContent } from '@/components/ui/card'
-import { FileSearch } from 'lucide-react'
+import { FileSearch, ClipboardCheck } from 'lucide-react'
 
 export default function Dashboard() {
   return (
@@ -29,12 +30,36 @@ export default function Dashboard() {
         </Card>
       </Link>
 
+      <Link to="/prp/07-test">
+        <Card className="hover:border-primary/50 transition-colors">
+          <CardContent className="py-4 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+              <ClipboardCheck className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <p className="font-medium text-gray-900">Test Checklist</p>
+              <p className="text-sm text-gray-500">Verify all tests pass before shipping</p>
+            </div>
+          </CardContent>
+        </Card>
+      </Link>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <OverallReadiness />
-        <SkillBreakdown />
-        <ContinuePractice />
-        <WeeklyGoals />
-        <UpcomingAssessments />
+        <ErrorBoundary>
+          <OverallReadiness />
+        </ErrorBoundary>
+        <ErrorBoundary>
+          <SkillBreakdown />
+        </ErrorBoundary>
+        <ErrorBoundary>
+          <ContinuePractice />
+        </ErrorBoundary>
+        <ErrorBoundary>
+          <WeeklyGoals />
+        </ErrorBoundary>
+        <ErrorBoundary>
+          <UpcomingAssessments />
+        </ErrorBoundary>
       </div>
     </div>
   )
