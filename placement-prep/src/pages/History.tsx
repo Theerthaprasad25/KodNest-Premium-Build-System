@@ -2,32 +2,21 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Card, CardContent } from '@/components/ui/card'
 import { getHistory } from '@/lib/storage'
-import type { AnalysisResult } from '@/types/analysis'
-
-function getLiveScore(result: AnalysisResult): number {
-  const map = result.skillConfidenceMap ?? {}
-  const skills: string[] = []
-  for (const arr of Object.values(result.extractedSkills.categories)) {
-    skills.push(...arr)
-  }
-  let score = result.readinessScore
-  for (const s of skills) {
-    score += (map[s] ?? 'practice') === 'know' ? 2 : -2
-  }
-  return Math.max(0, Math.min(100, score))
-}
-
+import type { AnalysisEntry } from '@/types/analysis'
 import { History as HistoryIcon } from 'lucide-react'
 
 export default function History() {
   const navigate = useNavigate()
-  const [entries, setEntries] = useState<AnalysisResult[]>([])
+  const [entries, setEntries] = useState<AnalysisEntry[]>([])
+  const [corruptedCount, setCorruptedCount] = useState(0)
 
   useEffect(() => {
-    setEntries(getHistory())
+    const { entries: list, corruptedCount: count } = getHistory()
+    setEntries(list)
+    setCorruptedCount(count)
   }, [])
 
-  function handleSelect(entry: AnalysisResult) {
+  function handleSelect(entry: AnalysisEntry) {
     navigate(`/dashboard/results?id=${entry.id}`, { state: { analysisId: entry.id } })
   }
 
@@ -49,11 +38,30 @@ export default function History() {
         <p className="text-gray-600">Your past job description analyses.</p>
       </div>
 
-      {entries.length === 0 ? (
+      {corruptedCount > 0 && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          One saved entry couldn&apos;t be loaded. Create a new analysis.
+        </div>
+      )}
+
+      {entries.length === 0 && corruptedCount === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
             <HistoryIcon className="w-12 h-12 text-gray-300 mx-auto mb-4" />
             <p className="text-gray-600 mb-4">No analyses yet. Analyze a job description to get started.</p>
+            <button
+              onClick={() => navigate('/dashboard/resources')}
+              className="px-6 py-2 rounded-lg font-medium text-white bg-primary hover:bg-primary-hover transition-colors"
+            >
+              Go to Resources
+            </button>
+          </CardContent>
+        </Card>
+      ) : entries.length === 0 ? (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <HistoryIcon className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+            <p className="text-gray-600 mb-4">No valid analyses. Create a new analysis.</p>
             <button
               onClick={() => navigate('/dashboard/resources')}
               className="px-6 py-2 rounded-lg font-medium text-white bg-primary hover:bg-primary-hover transition-colors"
@@ -76,10 +84,10 @@ export default function History() {
                     {entry.company || entry.role || 'Untitled'}
                     {entry.company && entry.role && ` — ${entry.role}`}
                   </p>
-                  <p className="text-sm text-gray-500">{formatDate(entry.createdAt)}</p>
+                  <p className="text-sm text-gray-500">{formatDate(entry.updatedAt)}</p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-lg font-bold text-primary">{getLiveScore(entry)}</span>
+                  <span className="text-lg font-bold text-primary">{entry.finalScore}</span>
                   <span className="text-sm text-gray-500">/ 100</span>
                 </div>
               </CardContent>

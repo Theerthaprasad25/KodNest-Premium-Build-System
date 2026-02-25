@@ -6,14 +6,27 @@ import {
   generateChecklist,
   generate7DayPlan,
   generateQuestions,
-  computeReadinessScore,
+  computeBaseScore,
+  computeFinalScore,
 } from '@/lib/analysis'
 import { generateCompanyIntel, generateRoundMapping } from '@/lib/companyIntel'
 import { saveAnalysis } from '@/lib/storage'
-import type { AnalysisResult } from '@/types/analysis'
+import type { AnalysisEntry } from '@/types/analysis'
 
 function generateId(): string {
   return `analysis-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
+}
+
+function getAllSkills(extractedSkills: AnalysisEntry['extractedSkills']): string[] {
+  return [
+    ...extractedSkills.coreCS,
+    ...extractedSkills.languages,
+    ...extractedSkills.web,
+    ...extractedSkills.data,
+    ...extractedSkills.cloud,
+    ...extractedSkills.testing,
+    ...extractedSkills.other,
+  ]
 }
 
 export default function Resources() {
@@ -23,42 +36,46 @@ export default function Resources() {
   const [jdText, setJdText] = useState('')
   const [isAnalyzing, setIsAnalyzing] = useState(false)
 
+  const jdTrimmed = jdText.trim()
+  const jdTooShort = jdTrimmed.length > 0 && jdTrimmed.length < 200
+
   function handleAnalyze() {
-    if (!jdText.trim()) return
+    if (!jdTrimmed) return
     setIsAnalyzing(true)
 
-    const extractedSkills = extractSkills(jdText)
-    const checklist = generateChecklist(jdText, extractedSkills)
-    const plan = generate7DayPlan(jdText, extractedSkills)
-    const questions = generateQuestions(jdText, extractedSkills)
-    const readinessScore = computeReadinessScore(company, role, jdText, extractedSkills)
+    const extractedSkills = extractSkills(jdTrimmed)
+    const checklist = generateChecklist(jdTrimmed, extractedSkills)
+    const plan7Days = generate7DayPlan(jdTrimmed, extractedSkills)
+    const questions = generateQuestions(jdTrimmed, extractedSkills)
+    const baseScore = computeBaseScore(company.trim(), role.trim(), jdTrimmed, extractedSkills)
 
-    const allSkills: string[] = []
-    for (const skills of Object.values(extractedSkills.categories)) {
-      allSkills.push(...skills)
-    }
+    const allSkills = getAllSkills(extractedSkills)
     const skillConfidenceMap: Record<string, 'know' | 'practice'> = {}
     for (const s of allSkills) {
       skillConfidenceMap[s] = 'practice'
     }
+    const finalScore = computeFinalScore(baseScore, skillConfidenceMap, allSkills)
 
-    const companyIntel = generateCompanyIntel(company.trim(), jdText)
+    const companyIntel = generateCompanyIntel(company.trim(), jdTrimmed)
     const roundMapping = generateRoundMapping(company.trim(), extractedSkills)
 
-    const result: AnalysisResult = {
+    const now = new Date().toISOString()
+    const result: AnalysisEntry = {
       id: generateId(),
-      createdAt: new Date().toISOString(),
+      createdAt: now,
       company: company.trim(),
       role: role.trim(),
-      jdText: jdText.trim(),
+      jdText: jdTrimmed,
       extractedSkills,
-      skillConfidenceMap,
-      companyIntel: companyIntel ?? undefined,
       roundMapping,
       checklist,
-      plan,
+      plan7Days,
       questions,
-      readinessScore,
+      baseScore,
+      skillConfidenceMap,
+      finalScore,
+      updatedAt: now,
+      companyIntel: companyIntel ?? undefined,
     }
 
     saveAnalysis(result)
@@ -107,10 +124,15 @@ export default function Resources() {
               rows={10}
               className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent resize-y"
             />
+            {jdTooShort && (
+              <p className="mt-2 text-sm text-amber-700 bg-amber-50 px-3 py-2 rounded-lg border border-amber-200">
+                This JD is too short to analyze deeply. Paste full JD for better output.
+              </p>
+            )}
           </div>
           <button
             onClick={handleAnalyze}
-            disabled={!jdText.trim() || isAnalyzing}
+            disabled={!jdTrimmed || isAnalyzing}
             className="px-6 py-2 rounded-lg font-medium text-white bg-primary hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {isAnalyzing ? 'Analyzing...' : 'Analyze'}

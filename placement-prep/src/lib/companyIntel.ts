@@ -1,5 +1,6 @@
-import type { CompanyIntel, CompanySize, MappedRound } from '@/types/analysis'
-import type { ExtractedSkills } from '@/types/analysis'
+import type { CompanyIntel, CompanySize, RoundMappingItem } from '@/types/analysis'
+import type { ExtractedSkillsSchema } from '@/types/analysis'
+import { hasAnySkills } from './analysis'
 
 const ENTERPRISE_COMPANIES = [
   'amazon', 'google', 'microsoft', 'meta', 'apple', 'infosys', 'tcs', 'wipro',
@@ -71,36 +72,35 @@ export function generateCompanyIntel(
 
 export function generateRoundMapping(
   company: string,
-  extractedSkills: ExtractedSkills
-): MappedRound[] {
+  extractedSkills: ExtractedSkillsSchema
+): RoundMappingItem[] {
   const size = getCompanySize(company)
-  const skills = extractedSkills.categories
-  const hasDSA = skills['Core CS'].includes('DSA') || !extractedSkills.hasAny
-  const hasWeb = skills.Web.length > 0
-  const hasReact = skills.Web.includes('React')
-  const hasNode = skills.Web.includes('Node.js')
+  const hasDSA = extractedSkills.coreCS.includes('DSA') || !hasAnySkills(extractedSkills)
+  const hasWeb = extractedSkills.web.length > 0
+  const hasReact = extractedSkills.web.includes('React')
+  const hasNode = extractedSkills.web.includes('Node.js')
 
   if (size === 'Enterprise' && hasDSA) {
     return [
       {
-        round: 'Round 1',
-        title: 'Online Test (DSA + Aptitude)',
-        whyThisMatters: 'Screens candidates at scale. Strong DSA and time management are critical.'
+        roundTitle: 'Round 1: Online Test (DSA + Aptitude)',
+        focusAreas: ['DSA', 'Aptitude'],
+        whyItMatters: 'Screens candidates at scale. Strong DSA and time management are critical.',
       },
       {
-        round: 'Round 2',
-        title: 'Technical (DSA + Core CS)',
-        whyThisMatters: 'Deep dive into problem-solving and fundamentals. Expect medium-level questions.'
+        roundTitle: 'Round 2: Technical (DSA + Core CS)',
+        focusAreas: ['DSA', 'Core CS'],
+        whyItMatters: 'Deep dive into problem-solving and fundamentals. Expect medium-level questions.',
       },
       {
-        round: 'Round 3',
-        title: 'Tech + Projects',
-        whyThisMatters: 'System design basics and project discussions. Show your end-to-end thinking.'
+        roundTitle: 'Round 3: Tech + Projects',
+        focusAreas: ['Projects', 'System Design'],
+        whyItMatters: 'System design basics and project discussions. Show your end-to-end thinking.',
       },
       {
-        round: 'Round 4',
-        title: 'HR',
-        whyThisMatters: 'Culture fit and behavioral alignment. Prepare STAR stories.'
+        roundTitle: 'Round 4: HR',
+        focusAreas: ['Behavioral'],
+        whyItMatters: 'Culture fit and behavioral alignment. Prepare STAR stories.',
       },
     ]
   }
@@ -108,24 +108,24 @@ export function generateRoundMapping(
   if (size === 'Enterprise' && hasWeb) {
     return [
       {
-        round: 'Round 1',
-        title: 'Online Test (Coding + Aptitude)',
-        whyThisMatters: 'Tests coding speed and logical reasoning. Often includes web-based questions.'
+        roundTitle: 'Round 1: Online Test (Coding + Aptitude)',
+        focusAreas: ['Coding', 'Aptitude'],
+        whyItMatters: 'Tests coding speed and logical reasoning. Often includes web-based questions.',
       },
       {
-        round: 'Round 2',
-        title: 'Technical (DSA + Web)',
-        whyThisMatters: 'Algorithm and framework questions. Be ready for React/Node concepts.'
+        roundTitle: 'Round 2: Technical (DSA + Web)',
+        focusAreas: ['DSA', 'Web'],
+        whyItMatters: 'Algorithm and framework questions. Be ready for React/Node concepts.',
       },
       {
-        round: 'Round 3',
-        title: 'System Design / Projects',
-        whyThisMatters: 'Discuss your projects and architecture. Show scalability thinking.'
+        roundTitle: 'Round 3: System Design / Projects',
+        focusAreas: ['Projects', 'Architecture'],
+        whyItMatters: 'Discuss your projects and architecture. Show scalability thinking.',
       },
       {
-        round: 'Round 4',
-        title: 'HR',
-        whyThisMatters: 'Final behavioral and culture fit.'
+        roundTitle: 'Round 4: HR',
+        focusAreas: ['Behavioral'],
+        whyItMatters: 'Final behavioral and culture fit.',
       },
     ]
   }
@@ -133,19 +133,19 @@ export function generateRoundMapping(
   if ((size === 'Startup' || size === 'Mid-size') && (hasReact || hasNode)) {
     return [
       {
-        round: 'Round 1',
-        title: 'Practical Coding',
-        whyThisMatters: 'Hands-on coding or take-home. They want to see how you build.'
+        roundTitle: 'Round 1: Practical Coding',
+        focusAreas: ['Coding', 'Stack'],
+        whyItMatters: 'Hands-on coding or take-home. They want to see how you build.',
       },
       {
-        round: 'Round 2',
-        title: 'System Discussion',
-        whyThisMatters: 'Architecture and tech choices. Be ready to explain your stack.'
+        roundTitle: 'Round 2: System Discussion',
+        focusAreas: ['Architecture', 'Tech Stack'],
+        whyItMatters: 'Architecture and tech choices. Be ready to explain your stack.',
       },
       {
-        round: 'Round 3',
-        title: 'Culture Fit',
-        whyThisMatters: 'Team fit and values. Show enthusiasm and adaptability.'
+        roundTitle: 'Round 3: Culture Fit',
+        focusAreas: ['Behavioral', 'Values'],
+        whyItMatters: 'Team fit and values. Show enthusiasm and adaptability.',
       },
     ]
   }
@@ -153,38 +153,38 @@ export function generateRoundMapping(
   if (size === 'Startup' || size === 'Mid-size') {
     return [
       {
-        round: 'Round 1',
-        title: 'Technical (DSA + Basics)',
-        whyThisMatters: 'Core problem-solving. Often shorter than enterprise rounds.'
+        roundTitle: 'Round 1: Technical (DSA + Basics)',
+        focusAreas: ['DSA', 'Basics'],
+        whyItMatters: 'Core problem-solving. Often shorter than enterprise rounds.',
       },
       {
-        round: 'Round 2',
-        title: 'Projects + Discussion',
-        whyThisMatters: 'What you have built. Practical experience matters.'
+        roundTitle: 'Round 2: Projects + Discussion',
+        focusAreas: ['Projects', 'Experience'],
+        whyItMatters: 'What you have built. Practical experience matters.',
       },
       {
-        round: 'Round 3',
-        title: 'Culture Fit',
-        whyThisMatters: 'Team fit and values. Show enthusiasm and adaptability.'
+        roundTitle: 'Round 3: Culture Fit',
+        focusAreas: ['Behavioral', 'Values'],
+        whyItMatters: 'Team fit and values. Show enthusiasm and adaptability.',
       },
     ]
   }
 
   return [
     {
-      round: 'Round 1',
-      title: 'Technical (DSA + Core CS)',
-      whyThisMatters: 'Screens for fundamentals and problem-solving ability.'
+      roundTitle: 'Round 1: Technical (DSA + Core CS)',
+      focusAreas: ['DSA', 'Core CS'],
+      whyItMatters: 'Screens for fundamentals and problem-solving ability.',
     },
     {
-      round: 'Round 2',
-      title: 'Tech + Projects',
-      whyThisMatters: 'Deeper technical and project discussion.'
+      roundTitle: 'Round 2: Tech + Projects',
+      focusAreas: ['Projects', 'Technical'],
+      whyItMatters: 'Deeper technical and project discussion.',
     },
     {
-      round: 'Round 3',
-      title: 'HR',
-      whyThisMatters: 'Behavioral and culture fit.'
+      roundTitle: 'Round 3: HR',
+      focusAreas: ['Behavioral'],
+      whyItMatters: 'Behavioral and culture fit.',
     },
   ]
 }

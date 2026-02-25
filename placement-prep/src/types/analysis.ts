@@ -1,31 +1,33 @@
-export type SkillCategory =
-  | 'Core CS'
-  | 'Languages'
-  | 'Web'
-  | 'Data'
-  | 'Cloud/DevOps'
-  | 'Testing'
-  | 'General'
-
-export interface ExtractedSkills {
-  categories: Record<SkillCategory, string[]>
-  hasAny: boolean
-}
-
-export interface RoundChecklist {
-  round: string
-  items: string[]
-}
-
-export interface DayPlan {
-  days: string
-  focus: string
-  tasks: string[]
-}
-
 export type SkillConfidence = 'know' | 'practice'
 
 export type CompanySize = 'Startup' | 'Mid-size' | 'Enterprise'
+
+export interface ExtractedSkillsSchema {
+  coreCS: string[]
+  languages: string[]
+  web: string[]
+  data: string[]
+  cloud: string[]
+  testing: string[]
+  other: string[]
+}
+
+export interface RoundMappingItem {
+  roundTitle: string
+  focusAreas: string[]
+  whyItMatters: string
+}
+
+export interface ChecklistItem {
+  roundTitle: string
+  items: string[]
+}
+
+export interface PlanDayItem {
+  day: string
+  focus: string
+  tasks: string[]
+}
 
 export interface CompanyIntel {
   companyName: string
@@ -34,24 +36,22 @@ export interface CompanyIntel {
   typicalHiringFocus: string
 }
 
-export interface MappedRound {
-  round: string
-  title: string
-  whyThisMatters: string
-}
-
-export interface AnalysisResult {
+export interface AnalysisEntry {
   id: string
   createdAt: string
   company: string
   role: string
   jdText: string
-  extractedSkills: ExtractedSkills
-  skillConfidenceMap?: Record<string, SkillConfidence>
-  companyIntel?: CompanyIntel
-  roundMapping?: MappedRound[]
-  checklist: RoundChecklist[]
-  plan: DayPlan[]
+  extractedSkills: ExtractedSkillsSchema
+  roundMapping: RoundMappingItem[]
+  checklist: ChecklistItem[]
+  plan7Days: PlanDayItem[]
   questions: string[]
-  readinessScore: number
+  baseScore: number
+  skillConfidenceMap: Record<string, SkillConfidence>
+  finalScore: number
+  updatedAt: string
+  companyIntel?: CompanyIntel
 }
+
+export type { AnalysisEntry as AnalysisResult }

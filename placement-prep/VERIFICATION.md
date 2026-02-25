@@ -149,3 +149,48 @@ Round mapping changes based on **company size + detected skills**.
 - Round Mapping still shows (uses Startup default)
 
 **Verify:** Each round has "Why this round matters" explanation. Display is vertical timeline.
+
+---
+
+## 11. Input Validation (Resources)
+
+1. Go to Resources → Analyze Job Description
+2. **JD required:** Leave JD empty → Analyze button disabled
+3. **JD < 200 chars:** Paste a short JD (e.g. 50 chars) → Calm warning appears: "This JD is too short to analyze deeply. Paste full JD for better output."
+4. **Company and Role:** Remain optional (can analyze with JD only)
+
+---
+
+## 12. Schema Consistency
+
+Every saved entry has:
+- `id`, `createdAt`, `company`, `role`, `jdText`
+- `extractedSkills`: `{ coreCS, languages, web, data, cloud, testing, other }` (all arrays)
+- `roundMapping`: `[{ roundTitle, focusAreas[], whyItMatters }]`
+- `checklist`: `[{ roundTitle, items[] }]`
+- `plan7Days`: `[{ day, focus, tasks[] }]`
+- `questions`, `baseScore`, `skillConfidenceMap`, `finalScore`, `updatedAt`
+
+---
+
+## 13. Default "Other" When No Skills
+
+**Minimal JD** (no keywords): "Looking for fresher. Good communication."
+
+**Verify:** `other` = ["Communication", "Problem solving", "Basic coding", "Projects"]. Plan/checklist/questions adapt.
+
+---
+
+## 14. Score Stability
+
+- **baseScore:** Computed only on Analyze. Never changes after save.
+- **finalScore:** Changes only when user toggles skill confidence.
+- **Toggle test:** Analyze → note baseScore → toggle skills → finalScore updates → refresh → persists. baseScore unchanged.
+
+---
+
+## 15. History Robustness (Corrupted Entry)
+
+**Simulate:** In DevTools → Application → Local Storage, edit `placement-prep-analysis-history` to add a malformed entry (e.g. `{"id":"x"}` without `jdText`).
+
+**Verify:** History loads valid entries. Corrupted ones skipped. Message: "One saved entry couldn't be loaded. Create a new analysis."

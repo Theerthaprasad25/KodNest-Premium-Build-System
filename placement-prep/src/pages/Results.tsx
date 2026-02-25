@@ -3,54 +3,46 @@ import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { getAnalysisById, getLatestAnalysis, updateAnalysis } from '@/lib/storage'
 import { generateCompanyIntel, generateRoundMapping } from '@/lib/companyIntel'
-import type { AnalysisResult, SkillCategory, SkillConfidence } from '@/types/analysis'
+import { computeFinalScore } from '@/lib/analysis'
+import type { AnalysisEntry } from '@/types/analysis'
 import { Copy, Download, CheckCircle } from 'lucide-react'
 
-const CATEGORY_LABELS: Record<SkillCategory, string> = {
-  'Core CS': 'Core CS',
-  Languages: 'Languages',
-  Web: 'Web',
-  Data: 'Data',
-  'Cloud/DevOps': 'Cloud/DevOps',
-  Testing: 'Testing',
-  General: 'General',
+const CATEGORY_LABELS: Record<string, string> = {
+  coreCS: 'Core CS',
+  languages: 'Languages',
+  web: 'Web',
+  data: 'Data',
+  cloud: 'Cloud/DevOps',
+  testing: 'Testing',
+  other: 'Other',
 }
 
-function getAllSkills(extractedSkills: AnalysisResult['extractedSkills']): string[] {
-  const skills: string[] = []
-  for (const arr of Object.values(extractedSkills.categories)) {
-    skills.push(...arr)
-  }
-  return skills
+function getAllSkills(extractedSkills: AnalysisEntry['extractedSkills']): string[] {
+  return [
+    ...extractedSkills.coreCS,
+    ...extractedSkills.languages,
+    ...extractedSkills.web,
+    ...extractedSkills.data,
+    ...extractedSkills.cloud,
+    ...extractedSkills.testing,
+    ...extractedSkills.other,
+  ]
 }
 
-function computeLiveScore(
-  baseScore: number,
-  skillConfidenceMap: Record<string, SkillConfidence>,
-  allSkills: string[]
-): number {
-  let score = baseScore
-  for (const skill of allSkills) {
-    const conf = skillConfidenceMap[skill] ?? 'practice'
-    score += conf === 'know' ? 2 : -2
-  }
-  return Math.max(0, Math.min(100, score))
-}
-
-function formatPlanForExport(plan: AnalysisResult['plan']): string {
+function formatPlanForExport(plan: AnalysisEntry['plan7Days']): string {
   return plan
     .map(
       (d) =>
-        `${d.days}: ${d.focus}\n${d.tasks.map((t) => `  • ${t}`).join('\n')}`
+        `${d.day}: ${d.focus}\n${d.tasks.map((t) => `  • ${t}`).join('\n')}`
     )
     .join('\n\n')
 }
 
-function formatChecklistForExport(checklist: AnalysisResult['checklist']): string {
+function formatChecklistForExport(checklist: AnalysisEntry['checklist']): string {
   return checklist
     .map(
       (r) =>
-        `${r.round}\n${r.items.map((i) => `  • ${i}`).join('\n')}`
+        `${r.roundTitle}\n${r.items.map((i) => `  • ${i}`).join('\n')}`
     )
     .join('\n\n')
 }
@@ -63,51 +55,61 @@ export default function Results() {
   const location = useLocation()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const [result, setResult] = useState<AnalysisResult | null>(null)
+  const [result, setResult] = useState<AnalysisEntry | null>(null)
   const [copied, setCopied] = useState<string | null>(null)
 
   useEffect(() => {
     const idFromState = (location.state as { analysisId?: string } | null)?.analysisId
     const idFromUrl = searchParams.get('id')
     const id = idFromState ?? idFromUrl
-    function migrateEntry(entry: AnalysisResult): AnalysisResult {
+
+    function ensureEntry(entry: AnalysisEntry): AnalysisEntry {
       let updated = entry
-      if (!entry.skillConfidenceMap) {
-        const allSkills = getAllSkills(entry.extractedSkills)
-        const map: Record<string, SkillConfidence> = {}
-        for (const s of allSkills) map[s] = 'practice'
-        updated = { ...updated, skillConfidenceMap: map }
+      const allSkills = getAllSkills(entry.extractedSkills)
+      for (const s of allSkills) {
+        if (!(s in updated.skillConfidenceMap)) {
+          updated = { ...updated, skillConfidenceMap: { ...updated.skillConfidenceMap, [s]: 'practice' } }
+        }
       }
-      if (!entry.companyIntel && entry.company.trim()) {
-        const intel = generateCompanyIntel(entry.company, entry.jdText)
+      updated = {
+        ...updated,
+        finalScore: computeFinalScore(updated.baseScore, updated.skillConfidenceMap, allSkills),
+      }
+      if (!updated.companyIntel && updated.company.trim()) {
+        const intel = generateCompanyIntel(updated.company, updated.jdText)
         if (intel) updated = { ...updated, companyIntel: intel }
       }
-      if (!entry.roundMapping) {
-        updated = { ...updated, roundMapping: generateRoundMapping(entry.company, entry.extractedSkills) }
+      if (!updated.roundMapping || updated.roundMapping.length === 0) {
+        updated = { ...updated, roundMapping: generateRoundMapping(updated.company, updated.extractedSkills) }
       }
-      if (updated !== entry) updateAnalysis(updated)
+      if (JSON.stringify(updated) !== JSON.stringify(entry)) {
+        updateAnalysis(updated)
+      }
       return updated
     }
 
     if (id) {
       const found = getAnalysisById(id)
-      if (found) {
-        setResult(migrateEntry(found))
-      } else {
-        setResult(null)
-      }
+      setResult(found ? ensureEntry(found) : null)
     } else {
       const latest = getLatestAnalysis()
-      setResult(latest ? migrateEntry(latest) : null)
+      setResult(latest ? ensureEntry(latest) : null)
     }
   }, [location.state, searchParams])
 
   const toggleSkill = useCallback(
     (skill: string) => {
       if (!result) return
-      const map = { ...(result.skillConfidenceMap ?? {}) }
+      const map = { ...result.skillConfidenceMap }
       map[skill] = map[skill] === 'know' ? 'practice' : 'know'
-      const updated = { ...result, skillConfidenceMap: map }
+      const allSkills = getAllSkills(result.extractedSkills)
+      const finalScore = computeFinalScore(result.baseScore, map, allSkills)
+      const updated: AnalysisEntry = {
+        ...result,
+        skillConfidenceMap: map,
+        finalScore,
+        updatedAt: new Date().toISOString(),
+      }
       setResult(updated)
       updateAnalysis(updated)
     },
@@ -152,18 +154,28 @@ export default function Results() {
     )
   }
 
-  const { company, role, extractedSkills, checklist, plan, questions, companyIntel, roundMapping } = result
-  const skillConfidenceMap = result.skillConfidenceMap ?? {}
+  const { company, role, extractedSkills, checklist, plan7Days, questions, companyIntel, roundMapping } = result
+  const skillConfidenceMap = result.skillConfidenceMap
   const allSkills = getAllSkills(extractedSkills)
-  const liveScore = computeLiveScore(result.readinessScore, skillConfidenceMap, allSkills)
+  const finalScore = result.finalScore
   const weakSkills = allSkills.filter((s) => (skillConfidenceMap[s] ?? 'practice') === 'practice').slice(0, 3)
+
+  const skillEntries = [
+    ['coreCS', extractedSkills.coreCS],
+    ['languages', extractedSkills.languages],
+    ['web', extractedSkills.web],
+    ['data', extractedSkills.data],
+    ['cloud', extractedSkills.cloud],
+    ['testing', extractedSkills.testing],
+    ['other', extractedSkills.other],
+  ] as const
 
   const fullExportText = [
     `Placement Prep — Analysis Results`,
     company || role ? `${company || ''} ${role ? `— ${role}` : ''}` : '',
     '',
     '=== READINESS SCORE ===',
-    `${liveScore} / 100`,
+    `${finalScore} / 100`,
     '',
     ...(companyIntel
       ? [
@@ -178,22 +190,20 @@ export default function Results() {
     ...(roundMapping && roundMapping.length > 0
       ? [
           '=== ROUND MAPPING ===',
-          ...roundMapping.map((r) => `${r.round}: ${r.title}\n  ${r.whyThisMatters}`),
+          ...roundMapping.map((r) => `${r.roundTitle}\n  ${r.whyItMatters}`),
           '',
         ]
       : []),
     '=== KEY SKILLS ===',
-    ...(
-      Object.entries(extractedSkills.categories) as [SkillCategory, string[]][]
-    ).flatMap(([cat, skills]) =>
-      skills.length > 0 ? [`${cat}: ${skills.join(', ')}`] : []
+    ...skillEntries.flatMap(([key, skills]) =>
+      skills.length > 0 ? [`${CATEGORY_LABELS[key]}: ${skills.join(', ')}`] : []
     ),
     '',
     '=== ROUND-WISE CHECKLIST ===',
     formatChecklistForExport(checklist),
     '',
     '=== 7-DAY PLAN ===',
-    formatPlanForExport(plan),
+    formatPlanForExport(plan7Days),
     '',
     '=== 10 LIKELY INTERVIEW QUESTIONS ===',
     formatQuestionsForExport(questions),
@@ -218,7 +228,7 @@ export default function Results() {
         </button>
       </div>
 
-      {/* Readiness Score (live) */}
+      {/* Readiness Score (finalScore) */}
       <Card>
         <CardHeader>
           <CardTitle>Readiness Score</CardTitle>
@@ -226,7 +236,7 @@ export default function Results() {
         <CardContent>
           <div className="flex items-center gap-4">
             <div className="w-24 h-24 rounded-full border-4 border-primary/30 flex items-center justify-center">
-              <span className="text-2xl font-bold text-primary">{liveScore}</span>
+              <span className="text-2xl font-bold text-primary">{finalScore}</span>
             </div>
             <p className="text-gray-600">/ 100</p>
           </div>
@@ -277,7 +287,7 @@ export default function Results() {
           <CardContent>
             <div className="relative">
               {roundMapping.map((r, i) => (
-                <div key={r.round} className="flex gap-4 pb-6 last:pb-0">
+                <div key={r.roundTitle} className="flex gap-4 pb-6 last:pb-0">
                   <div className="flex flex-col items-center">
                     <div className="w-10 h-10 rounded-full border-2 border-primary flex items-center justify-center bg-white shrink-0">
                       <span className="text-sm font-bold text-primary">{i + 1}</span>
@@ -287,8 +297,11 @@ export default function Results() {
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-gray-900">{r.round}: {r.title}</p>
-                    <p className="text-sm text-gray-600 mt-1">{r.whyThisMatters}</p>
+                    <p className="font-semibold text-gray-900">{r.roundTitle}</p>
+                    {r.focusAreas.length > 0 && (
+                      <p className="text-xs text-gray-500 mt-0.5">{r.focusAreas.join(', ')}</p>
+                    )}
+                    <p className="text-sm text-gray-600 mt-1">{r.whyItMatters}</p>
                   </div>
                 </div>
               ))}
@@ -305,13 +318,11 @@ export default function Results() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {(
-              Object.entries(extractedSkills.categories) as [SkillCategory, string[]][]
-            ).map(([cat, skills]) => {
+            {skillEntries.map(([key, skills]) => {
               if (skills.length === 0) return null
               return (
-                <div key={cat}>
-                  <p className="text-sm font-medium text-gray-500 mb-2">{CATEGORY_LABELS[cat]}</p>
+                <div key={key}>
+                  <p className="text-sm font-medium text-gray-500 mb-2">{CATEGORY_LABELS[key]}</p>
                   <div className="flex flex-wrap gap-2">
                     {skills.map((s) => {
                       const conf = skillConfidenceMap[s] ?? 'practice'
@@ -363,8 +374,8 @@ export default function Results() {
         <CardContent>
           <div className="space-y-6">
             {checklist.map((round) => (
-              <div key={round.round}>
-                <h4 className="font-semibold text-gray-900 mb-2">{round.round}</h4>
+              <div key={round.roundTitle}>
+                <h4 className="font-semibold text-gray-900 mb-2">{round.roundTitle}</h4>
                 <ul className="list-disc list-inside space-y-1 text-gray-600">
                   {round.items.map((item, i) => (
                     <li key={i}>{item}</li>
@@ -381,7 +392,7 @@ export default function Results() {
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>7-Day Plan</CardTitle>
           <button
-            onClick={() => copyToClipboard(formatPlanForExport(plan), 'plan')}
+            onClick={() => copyToClipboard(formatPlanForExport(plan7Days), 'plan')}
             className="flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-medium border border-gray-200 hover:bg-gray-50 transition-colors"
           >
             {copied === 'plan' ? <CheckCircle className="w-4 h-4 text-primary" /> : <Copy className="w-4 h-4" />}
@@ -390,9 +401,9 @@ export default function Results() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {plan.map((day) => (
-              <div key={day.days} className="border-l-2 border-primary/30 pl-4">
-                <p className="font-semibold text-gray-900">{day.days}: {day.focus}</p>
+            {plan7Days.map((day) => (
+              <div key={day.day} className="border-l-2 border-primary/30 pl-4">
+                <p className="font-semibold text-gray-900">{day.day}: {day.focus}</p>
                 <ul className="list-disc list-inside text-gray-600 mt-1 space-y-0.5">
                   {day.tasks.map((t, i) => (
                     <li key={i}>{t}</li>
