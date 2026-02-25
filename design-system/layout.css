@@ -1,0 +1,160 @@
+/**
+ * KodNest Premium Build System — Global Layout
+ * [Top Bar] → [Context Header] → [Primary Workspace + Secondary Panel] → [Proof Footer]
+ */
+
+/* ─── PAGE SHELL ─── */
+.kodnest-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ─── TOP BAR ─── */
+.kodnest-topbar {
+  height: var(--topbar-height);
+  padding: 0 var(--space-3);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: var(--card-border);
+  background: var(--color-bg);
+  flex-shrink: 0;
+}
+
+.kodnest-topbar__project {
+  font-family: var(--font-body);
+  font-size: var(--text-small);
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+.kodnest-topbar__progress {
+  font-family: var(--font-body);
+  font-size: var(--text-small);
+  color: var(--color-muted);
+}
+
+.kodnest-topbar__status {
+  font-family: var(--font-body);
+  font-size: var(--text-small);
+  padding: var(--space-1) var(--space-2);
+  border: var(--input-border);
+  border-radius: var(--radius);
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+.kodnest-topbar__status--shipped {
+  border-color: var(--color-success);
+  color: var(--color-success);
+}
+
+.kodnest-topbar__status--in-progress {
+  border-color: var(--color-warning);
+  color: var(--color-warning);
+}
+
+/* ─── CONTEXT HEADER ─── */
+.kodnest-context-header {
+  padding: var(--space-4) var(--space-3);
+  border-bottom: var(--card-border);
+  flex-shrink: 0;
+}
+
+.kodnest-context-header__title {
+  margin: 0 0 var(--space-1);
+  font-family: var(--font-heading);
+  font-size: var(--text-h1);
+  font-weight: 600;
+  line-height: var(--leading-tight);
+}
+
+.kodnest-context-header__subtext {
+  margin: 0;
+  font-size: var(--text-body-lg);
+  color: var(--color-muted);
+  line-height: var(--leading-normal);
+}
+
+/* ─── MAIN CONTENT AREA ─── */
+.kodnest-main {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+/* ─── PRIMARY WORKSPACE (70%) ─── */
+.kodnest-workspace {
+  width: var(--workspace-width);
+  padding: var(--space-4) var(--space-3);
+  overflow-y: auto;
+}
+
+/* ─── SECONDARY PANEL (30%) ─── */
+.kodnest-panel {
+  width: var(--panel-width);
+  padding: var(--space-3);
+  border-left: var(--card-border);
+  background: var(--color-bg);
+  overflow-y: auto;
+}
+
+.kodnest-panel__section {
+  margin-bottom: var(--space-3);
+}
+
+.kodnest-panel__section:last-child {
+  margin-bottom: 0;
+}
+
+.kodnest-panel__label {
+  font-size: var(--text-small);
+  font-weight: 500;
+  color: var(--color-muted);
+  margin-bottom: var(--space-1);
+}
+
+/* ─── PROOF FOOTER ─── */
+.kodnest-footer {
+  height: var(--footer-height);
+  padding: 0 var(--space-3);
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  border-top: var(--card-border);
+  background: var(--color-bg);
+  flex-shrink: 0;
+}
+
+.kodnest-footer__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-small);
+  color: var(--color-muted);
+}
+
+.kodnest-footer__item--complete {
+  color: var(--color-success);
+}
+
+.kodnest-footer__checkbox {
+  width: 18px;
+  height: 18px;
+  border: var(--input-border);
+  border-radius: var(--radius);
+  background: var(--color-bg);
+  cursor: pointer;
+  transition: border-color var(--transition-duration) var(--transition-easing);
+}
+
+.kodnest-footer__checkbox:focus {
+  outline: none;
+  border-color: var(--color-border-focus);
+}
+
+.kodnest-footer__checkbox--checked {
+  border-color: var(--color-success);
+  background: var(--color-success);
+}

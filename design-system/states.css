@@ -1,0 +1,66 @@
+/**
+ * KodNest Premium Build System — Error & Empty States
+ * Errors: explain what went wrong + how to fix. Never blame user.
+ * Empty states: provide next action. Never feel dead.
+ */
+
+/* ─── ERROR STATE ─── */
+.kodnest-error {
+  padding: var(--space-3);
+  border: var(--card-border);
+  border-left: 4px solid var(--color-accent);
+  border-radius: var(--radius);
+  background: var(--color-bg);
+}
+
+.kodnest-error__title {
+  margin: 0 0 var(--space-1);
+  font-size: var(--text-body);
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.kodnest-error__message {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-body);
+  color: var(--color-muted);
+  line-height: var(--leading-normal);
+}
+
+.kodnest-error__fix {
+  margin: 0;
+  font-size: var(--text-small);
+  color: var(--color-text);
+  line-height: var(--leading-normal);
+}
+
+/* ─── EMPTY STATE ─── */
+.kodnest-empty {
+  padding: var(--space-4);
+  text-align: center;
+  border: var(--card-border);
+  border-radius: var(--radius);
+  background: var(--color-bg);
+}
+
+.kodnest-empty__title {
+  margin: 0 0 var(--space-1);
+  font-family: var(--font-heading);
+  font-size: var(--text-h4);
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.kodnest-empty__message {
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-body);
+  color: var(--color-muted);
+  line-height: var(--leading-normal);
+  max-width: var(--text-max-width);
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.kodnest-empty__action {
+  margin-top: var(--space-3);
+}
