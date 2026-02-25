@@ -108,3 +108,44 @@ Looking for a fresher to join our team. Good communication skills required.
 1. On Results page, scroll to bottom
 2. **Verify:** "Action Next" card shows top 3 weak skills (those marked "Need practice")
 3. **Verify:** Suggests "Start Day 1 plan now."
+
+---
+
+## 9. Company Intel
+
+**When company name is provided**, Results shows a "Company Intel" card with:
+- Company name
+- Industry (inferred from JD keywords or "Technology Services")
+- Estimated size: Startup (<200), Mid-size (200–2000), Enterprise (2000+)
+- Typical Hiring Focus (template based on size)
+- Note: "Demo Mode: Company intel generated heuristically."
+
+**Test scenarios:**
+
+| Company   | Expected Size   |
+|-----------|-----------------|
+| Amazon    | Enterprise      |
+| Infosys   | Enterprise      |
+| TCS       | Enterprise      |
+| Freshworks| Mid-size        |
+| Acme Corp | Startup (unknown) |
+
+---
+
+## 10. Round Mapping
+
+Round mapping changes based on **company size + detected skills**.
+
+**Test scenario A — Enterprise + DSA:**
+- Company: "Amazon", JD with "DSA"
+- Expected: Round 1: Online Test (DSA + Aptitude), Round 2: Technical (DSA + Core CS), Round 3: Tech + Projects, Round 4: HR
+
+**Test scenario B — Startup + React/Node:**
+- Company: "Acme Startup", JD with "React" and "Node.js"
+- Expected: Round 1: Practical Coding, Round 2: System Discussion, Round 3: Culture Fit
+
+**Test scenario C — No company:**
+- Company: (empty)
+- Round Mapping still shows (uses Startup default)
+
+**Verify:** Each round has "Why this round matters" explanation. Display is vertical timeline.

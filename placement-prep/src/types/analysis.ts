@@ -25,6 +25,21 @@ export interface DayPlan {
 
 export type SkillConfidence = 'know' | 'practice'
 
+export type CompanySize = 'Startup' | 'Mid-size' | 'Enterprise'
+
+export interface CompanyIntel {
+  companyName: string
+  industry: string
+  sizeCategory: CompanySize
+  typicalHiringFocus: string
+}
+
+export interface MappedRound {
+  round: string
+  title: string
+  whyThisMatters: string
+}
+
 export interface AnalysisResult {
   id: string
   createdAt: string
@@ -33,6 +48,8 @@ export interface AnalysisResult {
   jdText: string
   extractedSkills: ExtractedSkills
   skillConfidenceMap?: Record<string, SkillConfidence>
+  companyIntel?: CompanyIntel
+  roundMapping?: MappedRound[]
   checklist: RoundChecklist[]
   plan: DayPlan[]
   questions: string[]

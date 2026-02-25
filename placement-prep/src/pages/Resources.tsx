@@ -8,6 +8,7 @@ import {
   generateQuestions,
   computeReadinessScore,
 } from '@/lib/analysis'
+import { generateCompanyIntel, generateRoundMapping } from '@/lib/companyIntel'
 import { saveAnalysis } from '@/lib/storage'
 import type { AnalysisResult } from '@/types/analysis'
 
@@ -41,6 +42,9 @@ export default function Resources() {
       skillConfidenceMap[s] = 'practice'
     }
 
+    const companyIntel = generateCompanyIntel(company.trim(), jdText)
+    const roundMapping = generateRoundMapping(company.trim(), extractedSkills)
+
     const result: AnalysisResult = {
       id: generateId(),
       createdAt: new Date().toISOString(),
@@ -49,6 +53,8 @@ export default function Resources() {
       jdText: jdText.trim(),
       extractedSkills,
       skillConfidenceMap,
+      companyIntel: companyIntel ?? undefined,
+      roundMapping,
       checklist,
       plan,
       questions,

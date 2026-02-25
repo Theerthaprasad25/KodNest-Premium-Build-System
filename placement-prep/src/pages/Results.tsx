@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { getAnalysisById, getLatestAnalysis, updateAnalysis } from '@/lib/storage'
+import { generateCompanyIntel, generateRoundMapping } from '@/lib/companyIntel'
 import type { AnalysisResult, SkillCategory, SkillConfidence } from '@/types/analysis'
 import { Copy, Download, CheckCircle } from 'lucide-react'
 
@@ -69,30 +70,35 @@ export default function Results() {
     const idFromState = (location.state as { analysisId?: string } | null)?.analysisId
     const idFromUrl = searchParams.get('id')
     const id = idFromState ?? idFromUrl
+    function migrateEntry(entry: AnalysisResult): AnalysisResult {
+      let updated = entry
+      if (!entry.skillConfidenceMap) {
+        const allSkills = getAllSkills(entry.extractedSkills)
+        const map: Record<string, SkillConfidence> = {}
+        for (const s of allSkills) map[s] = 'practice'
+        updated = { ...updated, skillConfidenceMap: map }
+      }
+      if (!entry.companyIntel && entry.company.trim()) {
+        const intel = generateCompanyIntel(entry.company, entry.jdText)
+        if (intel) updated = { ...updated, companyIntel: intel }
+      }
+      if (!entry.roundMapping) {
+        updated = { ...updated, roundMapping: generateRoundMapping(entry.company, entry.extractedSkills) }
+      }
+      if (updated !== entry) updateAnalysis(updated)
+      return updated
+    }
+
     if (id) {
       const found = getAnalysisById(id)
       if (found) {
-        if (!found.skillConfidenceMap) {
-          const allSkills = getAllSkills(found.extractedSkills)
-          const map: Record<string, SkillConfidence> = {}
-          for (const s of allSkills) map[s] = 'practice'
-          found.skillConfidenceMap = map
-          updateAnalysis(found)
-        }
-        setResult(found)
+        setResult(migrateEntry(found))
       } else {
         setResult(null)
       }
     } else {
       const latest = getLatestAnalysis()
-      if (latest && !latest.skillConfidenceMap) {
-        const allSkills = getAllSkills(latest.extractedSkills)
-        const map: Record<string, SkillConfidence> = {}
-        for (const s of allSkills) map[s] = 'practice'
-        latest.skillConfidenceMap = map
-        updateAnalysis(latest)
-      }
-      setResult(latest)
+      setResult(latest ? migrateEntry(latest) : null)
     }
   }, [location.state, searchParams])
 
@@ -146,7 +152,7 @@ export default function Results() {
     )
   }
 
-  const { company, role, extractedSkills, checklist, plan, questions } = result
+  const { company, role, extractedSkills, checklist, plan, questions, companyIntel, roundMapping } = result
   const skillConfidenceMap = result.skillConfidenceMap ?? {}
   const allSkills = getAllSkills(extractedSkills)
   const liveScore = computeLiveScore(result.readinessScore, skillConfidenceMap, allSkills)
@@ -159,6 +165,23 @@ export default function Results() {
     '=== READINESS SCORE ===',
     `${liveScore} / 100`,
     '',
+    ...(companyIntel
+      ? [
+          '=== COMPANY INTEL ===',
+          `Company: ${companyIntel.companyName}`,
+          `Industry: ${companyIntel.industry}`,
+          `Size: ${companyIntel.sizeCategory}`,
+          `Typical Hiring Focus: ${companyIntel.typicalHiringFocus}`,
+          '',
+        ]
+      : []),
+    ...(roundMapping && roundMapping.length > 0
+      ? [
+          '=== ROUND MAPPING ===',
+          ...roundMapping.map((r) => `${r.round}: ${r.title}\n  ${r.whyThisMatters}`),
+          '',
+        ]
+      : []),
     '=== KEY SKILLS ===',
     ...(
       Object.entries(extractedSkills.categories) as [SkillCategory, string[]][]
@@ -209,6 +232,71 @@ export default function Results() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Company Intel */}
+      {companyIntel && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Company Intel</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div>
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Company</p>
+                <p className="font-medium text-gray-900">{companyIntel.companyName}</p>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Industry</p>
+                <p className="font-medium text-gray-900">{companyIntel.industry}</p>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Estimated Size</p>
+                <p className="font-medium text-gray-900">
+                  {companyIntel.sizeCategory}
+                  {companyIntel.sizeCategory === 'Startup' && ' (<200)'}
+                  {companyIntel.sizeCategory === 'Mid-size' && ' (200–2000)'}
+                  {companyIntel.sizeCategory === 'Enterprise' && ' (2000+)'}
+                </p>
+              </div>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Typical Hiring Focus</p>
+              <p className="text-gray-600 text-sm leading-relaxed">{companyIntel.typicalHiringFocus}</p>
+            </div>
+            <p className="text-xs text-gray-500 italic">Demo Mode: Company intel generated heuristically.</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Round Mapping */}
+      {roundMapping && roundMapping.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Round Mapping</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="relative">
+              {roundMapping.map((r, i) => (
+                <div key={r.round} className="flex gap-4 pb-6 last:pb-0">
+                  <div className="flex flex-col items-center">
+                    <div className="w-10 h-10 rounded-full border-2 border-primary flex items-center justify-center bg-white shrink-0">
+                      <span className="text-sm font-bold text-primary">{i + 1}</span>
+                    </div>
+                    {i < roundMapping.length - 1 && (
+                      <div className="w-0.5 flex-1 min-h-[24px] bg-gray-200 my-1" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-gray-900">{r.round}: {r.title}</p>
+                    <p className="text-sm text-gray-600 mt-1">{r.whyThisMatters}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-gray-500 italic mt-4">Demo Mode: Company intel generated heuristically.</p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Key Skills Extracted */}
       <Card>
