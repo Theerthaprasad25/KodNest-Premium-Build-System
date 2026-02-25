@@ -75,3 +75,36 @@ Looking for a fresher to join our team. Good communication skills required.
 - All logic runs in the browser
 - Data stored in localStorage
 - Works offline after first load
+
+---
+
+## 6. Interactive Skill Toggles & Live Score
+
+1. Open Results for any analysis
+2. In "Key Skills Extracted", each skill has a toggle: "Need practice" (default) / "I know this"
+3. Click a skill toggle to switch between states
+4. **Verify:** Readiness Score updates in real-time (+2 per "I know", -2 per "Need practice")
+5. Refresh the page (F5)
+6. **Verify:** Toggle states and score persist
+7. Go to History → click the same entry
+8. **Verify:** Same toggles and score
+
+---
+
+## 7. Export Tools
+
+1. On Results page, find:
+   - "Copy 7-day plan" (on 7-Day Plan card)
+   - "Copy round checklist" (on Round-wise Checklist card)
+   - "Copy 10 questions" (on 10 Likely Interview Questions card)
+   - "Download as TXT" (in Export card)
+2. Click each copy button → paste elsewhere → **Verify:** Plain text copied
+3. Click "Download as TXT" → **Verify:** Single .txt file downloads with all sections
+
+---
+
+## 8. Action Next Box
+
+1. On Results page, scroll to bottom
+2. **Verify:** "Action Next" card shows top 3 weak skills (those marked "Need practice")
+3. **Verify:** Suggests "Start Day 1 plan now."

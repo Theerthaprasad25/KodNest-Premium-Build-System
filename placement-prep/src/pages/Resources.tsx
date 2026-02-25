@@ -32,6 +32,15 @@ export default function Resources() {
     const questions = generateQuestions(jdText, extractedSkills)
     const readinessScore = computeReadinessScore(company, role, jdText, extractedSkills)
 
+    const allSkills: string[] = []
+    for (const skills of Object.values(extractedSkills.categories)) {
+      allSkills.push(...skills)
+    }
+    const skillConfidenceMap: Record<string, 'know' | 'practice'> = {}
+    for (const s of allSkills) {
+      skillConfidenceMap[s] = 'practice'
+    }
+
     const result: AnalysisResult = {
       id: generateId(),
       createdAt: new Date().toISOString(),
@@ -39,6 +48,7 @@ export default function Resources() {
       role: role.trim(),
       jdText: jdText.trim(),
       extractedSkills,
+      skillConfidenceMap,
       checklist,
       plan,
       questions,

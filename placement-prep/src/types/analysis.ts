@@ -23,6 +23,8 @@ export interface DayPlan {
   tasks: string[]
 }
 
+export type SkillConfidence = 'know' | 'practice'
+
 export interface AnalysisResult {
   id: string
   createdAt: string
@@ -30,6 +32,7 @@ export interface AnalysisResult {
   role: string
   jdText: string
   extractedSkills: ExtractedSkills
+  skillConfidenceMap?: Record<string, SkillConfidence>
   checklist: RoundChecklist[]
   plan: DayPlan[]
   questions: string[]

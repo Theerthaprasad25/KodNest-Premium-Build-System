@@ -3,6 +3,20 @@ import { useNavigate } from 'react-router-dom'
 import { Card, CardContent } from '@/components/ui/card'
 import { getHistory } from '@/lib/storage'
 import type { AnalysisResult } from '@/types/analysis'
+
+function getLiveScore(result: AnalysisResult): number {
+  const map = result.skillConfidenceMap ?? {}
+  const skills: string[] = []
+  for (const arr of Object.values(result.extractedSkills.categories)) {
+    skills.push(...arr)
+  }
+  let score = result.readinessScore
+  for (const s of skills) {
+    score += (map[s] ?? 'practice') === 'know' ? 2 : -2
+  }
+  return Math.max(0, Math.min(100, score))
+}
+
 import { History as HistoryIcon } from 'lucide-react'
 
 export default function History() {
@@ -65,7 +79,7 @@ export default function History() {
                   <p className="text-sm text-gray-500">{formatDate(entry.createdAt)}</p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-lg font-bold text-primary">{entry.readinessScore}</span>
+                  <span className="text-lg font-bold text-primary">{getLiveScore(entry)}</span>
                   <span className="text-sm text-gray-500">/ 100</span>
                 </div>
               </CardContent>

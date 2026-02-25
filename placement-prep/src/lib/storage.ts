@@ -28,3 +28,11 @@ export function getLatestAnalysis(): AnalysisResult | null {
   const history = getHistory()
   return history[0] ?? null
 }
+
+export function updateAnalysis(updated: AnalysisResult): void {
+  const history = getHistory()
+  const index = history.findIndex((r) => r.id === updated.id)
+  if (index === -1) return
+  history[index] = updated
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(history))
+}
